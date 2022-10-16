@@ -1,0 +1,548 @@
+-- Databricks notebook source
+-- DBTITLE 1,Loading the Landing zone on Bronze Layer via Autoloader 
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC 
+-- MAGIC ######################  RAW STORE CDF FEED  ########################
+-- MAGIC schema_hint = """
+-- MAGIC               store_id BIGINT ,
+-- MAGIC               business_key STRING,
+-- MAGIC               name STRING,
+-- MAGIC               email STRING,
+-- MAGIC               city STRING,
+-- MAGIC               address STRING,
+-- MAGIC               phone_number STRING,
+-- MAGIC               created_date TIMESTAMP,
+-- MAGIC               updated_date TIMESTAMP,
+-- MAGIC               start_at TIMESTAMP,
+-- MAGIC               end_at TIMESTAMP
+-- MAGIC 
+-- MAGIC """
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC src_table_name = "dim_store"
+-- MAGIC schema_checkpoint_file_path = parent_path + src_table_name + "/e2-demo/ingestion/" + src_table_name 
+-- MAGIC dest_table_name = "main.dv2_0.raw_dim_store"
+-- MAGIC (
+-- MAGIC    spark.readStream.format("cloudFiles")
+-- MAGIC         .option("cloudFiles.schemaLocation", schema_checkpoint_file_path+"/schema")
+-- MAGIC         .option("cloudFiles.format", "json")
+-- MAGIC         .option("cloudFiles.schemaHints", schema_hint)
+-- MAGIC         .load(parent_path+"/Tables/"+src_table_name)
+-- MAGIC         .writeStream.format("delta")
+-- MAGIC         .option("mergeSchema", "true")
+-- MAGIC         .option("checkpointLocation",schema_checkpoint_file_path+"/checkpoint")
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable("main.dv2_0.raw_dim_store")        
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Bronze to Raw Data Vault
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC ######################  hub_store  ########################
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC from pyspark.sql.functions  import *
+-- MAGIC 
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC src_table_name = "main.dv2_0.raw_dim_store"
+-- MAGIC dest_table_name = "main.dv2_0.hub_store"
+-- MAGIC checkpoint_path = parent_path + src_table_name + "/e2-demo/CDF/checkpoint/" + dest_table_name 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC (spark.readStream.format("delta") 
+-- MAGIC         .option("readChangeFeed", "true") 
+-- MAGIC         .option("startingVersion", 0) 
+-- MAGIC         .table(src_table_name) 
+-- MAGIC         .select(
+-- MAGIC             sha1(upper(trim(col("store_id")))).alias("sha1_hub_store"),
+-- MAGIC             col("store_id").alias("store_id"),
+-- MAGIC             current_timestamp().alias("load_ts"),
+-- MAGIC             lit("Store").alias("source")
+-- MAGIC         )
+-- MAGIC     .writeStream.format("delta") 
+-- MAGIC         .option("checkpointLocation", checkpoint_path) 
+-- MAGIC         .option("mergeSchema", "true") 
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable(dest_table_name) 
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC ######################  sat_store  ########################
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC from pyspark.sql.functions  import *
+-- MAGIC 
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC src_table_name = "main.dv2_0.raw_dim_store"
+-- MAGIC dest_table_name = "main.dv2_0.sat_store"
+-- MAGIC checkpoint_path = parent_path + src_table_name + "/e2-demo/CDF/checkpoint/" + dest_table_name 
+-- MAGIC 
+-- MAGIC (spark.readStream.format("delta") 
+-- MAGIC         .option("readChangeFeed", "true") 
+-- MAGIC         .option("startingVersion", 0) 
+-- MAGIC         .table(src_table_name) 
+-- MAGIC         .select(
+-- MAGIC             sha1(upper(trim(col("store_id")))).alias("sha1_hub_store"),
+-- MAGIC             col("business_key").alias("business_key"),
+-- MAGIC             col("name").alias("name"),
+-- MAGIC             col("email").alias("email"),
+-- MAGIC             col("city").alias("city"),
+-- MAGIC             col("address").alias("address"),
+-- MAGIC             col("phone_number").alias("phone_number"),
+-- MAGIC             col("start_at").alias("start_at"),
+-- MAGIC             sha1(concat(upper(trim(col("business_key"))),upper(trim(col("name"))),upper(trim(col("email")))
+-- MAGIC                   ,upper(trim(col("address"))),upper(trim(col("phone_number"))))).alias("hash_diff"),
+-- MAGIC             current_timestamp().alias("load_ts"),
+-- MAGIC             lit("Store").alias("source")
+-- MAGIC         )
+-- MAGIC     .writeStream.format("delta") 
+-- MAGIC         .option("checkpointLocation", checkpoint_path) 
+-- MAGIC         .option("mergeSchema", "true")
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable(dest_table_name) 
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC 
+-- MAGIC ######################  RAW PRODUCT CDF FEED  ########################
+-- MAGIC schema_hint = """
+-- MAGIC               product_id BIGINT ,
+-- MAGIC               type STRING,
+-- MAGIC               SKU STRING,
+-- MAGIC               name STRING,
+-- MAGIC               description STRING,
+-- MAGIC               sale_price DOUBLE,
+-- MAGIC               regular_price DOUBLE,
+-- MAGIC               created_date TIMESTAMP,
+-- MAGIC               updated_date TIMESTAMP,
+-- MAGIC               start_at TIMESTAMP,
+-- MAGIC               end_at TIMESTAMP
+-- MAGIC 
+-- MAGIC """
+-- MAGIC src_table_name = "dim_product"
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC schema_checkpoint_file_path = parent_path + src_table_name + "/e2-demo/ingestion/" + src_table_name 
+-- MAGIC dest_table_name = "main.dv2_0.raw_dim_product"
+-- MAGIC (
+-- MAGIC    spark.readStream.format("cloudFiles")
+-- MAGIC         .option("cloudFiles.schemaLocation", schema_checkpoint_file_path+"/schema")
+-- MAGIC         .option("cloudFiles.format", "json")
+-- MAGIC         .option("cloudFiles.schemaHints", schema_hint)
+-- MAGIC         .load(parent_path+"/Tables/"+src_table_name)
+-- MAGIC         .writeStream.format("delta")
+-- MAGIC         .option("mergeSchema", "true")
+-- MAGIC         .option("checkpointLocation",schema_checkpoint_file_path+"/checkpoint")
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable("main.dv2_0.raw_dim_product")        
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC ######################  hub_product  ########################
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC from pyspark.sql.functions  import *
+-- MAGIC 
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC src_table_name = "main.dv2_0.raw_dim_product"
+-- MAGIC dest_table_name = "main.dv2_0.hub_product"
+-- MAGIC checkpoint_path = parent_path + src_table_name + "/e2-demo/CDF/checkpoint/" + dest_table_name 
+-- MAGIC 
+-- MAGIC (spark.readStream.format("delta") 
+-- MAGIC         .option("readChangeFeed", "true") 
+-- MAGIC         .option("startingVersion", 0) 
+-- MAGIC         .table(src_table_name) 
+-- MAGIC         .select(
+-- MAGIC             sha1(upper(trim(col("product_id")))).alias("sha1_hub_product"),
+-- MAGIC             col("product_id").alias("product_id"),
+-- MAGIC             current_timestamp().alias("load_ts"),
+-- MAGIC             lit("Product").alias("source")
+-- MAGIC         )
+-- MAGIC     .writeStream.format("delta") 
+-- MAGIC         .option("checkpointLocation", checkpoint_path) 
+-- MAGIC         .option("mergeSchema", "true") 
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable(dest_table_name) 
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC ######################  sat_product ########################
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC from pyspark.sql.functions  import *
+-- MAGIC 
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC src_table_name = "main.dv2_0.raw_dim_product"
+-- MAGIC dest_table_name = "main.dv2_0.sat_product"
+-- MAGIC checkpoint_path = parent_path + src_table_name + "/e2-demo/CDF/checkpoint/" + dest_table_name 
+-- MAGIC 
+-- MAGIC (spark.readStream.format("delta") 
+-- MAGIC         .option("readChangeFeed", "true") 
+-- MAGIC         .option("startingVersion", 0) 
+-- MAGIC         .table(src_table_name) 
+-- MAGIC         .select(
+-- MAGIC             sha1(upper(trim(col("product_id")))).alias("sha1_hub_product"),
+-- MAGIC             col("type").alias("type"),
+-- MAGIC             col("SKU").alias("SKU"),
+-- MAGIC             col("name").alias("name"),
+-- MAGIC             col("description").alias("description"),
+-- MAGIC             col("sale_price").alias("sale_price"),
+-- MAGIC             col("regular_price").alias("regular_price"),
+-- MAGIC             col("start_at").alias("start_at"),
+-- MAGIC             sha1(concat(upper(trim(col("type"))),upper(trim(col("SKU"))),upper(trim(col("name")))
+-- MAGIC                   ,upper(trim(col("sale_price"))),upper(trim(col("regular_price"))))).alias("hash_diff"),
+-- MAGIC             current_timestamp().alias("load_ts"),
+-- MAGIC             lit("Product").alias("source")
+-- MAGIC         )
+-- MAGIC     .writeStream.format("delta") 
+-- MAGIC         .option("checkpointLocation", checkpoint_path) 
+-- MAGIC         .option("mergeSchema", "true") 
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable(dest_table_name) 
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC ############################## RAW CUSTOMER FEED #########################
+-- MAGIC 
+-- MAGIC schema_hint = """
+-- MAGIC               customer_id BIGINT,
+-- MAGIC               name STRING,
+-- MAGIC               email STRING,
+-- MAGIC               address STRING,
+-- MAGIC               created_date TIMESTAMP,
+-- MAGIC               updated_date TIMESTAMP,
+-- MAGIC               start_at TIMESTAMP,
+-- MAGIC               end_at TIMESTAMP
+-- MAGIC 
+-- MAGIC """
+-- MAGIC src_table_name = "dim_customer"
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC schema_checkpoint_file_path = parent_path + src_table_name + "/e2-demo/ingestion/" + src_table_name 
+-- MAGIC dest_table_name = "main.dv2_0.raw_dim_customer"
+-- MAGIC (
+-- MAGIC    spark.readStream.format("cloudFiles")
+-- MAGIC         .option("cloudFiles.schemaLocation", schema_checkpoint_file_path+"/schema")
+-- MAGIC         .option("cloudFiles.format", "json")
+-- MAGIC         .option("cloudFiles.schemaHints", schema_hint)
+-- MAGIC         .load(parent_path+"/Tables/"+src_table_name)
+-- MAGIC         .writeStream.format("delta")
+-- MAGIC         .option("mergeSchema", "true")
+-- MAGIC         .option("checkpointLocation",schema_checkpoint_file_path+"/checkpoint")
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable("main.dv2_0.raw_dim_customer")        
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC ######################  hub_Customer  ########################
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC from pyspark.sql.functions  import *
+-- MAGIC 
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC src_table_name = "main.dv2_0.raw_dim_customer"
+-- MAGIC dest_table_name = "main.dv2_0.hub_customer"
+-- MAGIC checkpoint_path = parent_path + src_table_name + "/e2-demo/CDF/checkpoint/" + dest_table_name 
+-- MAGIC 
+-- MAGIC (spark.readStream.format("delta") 
+-- MAGIC         .option("readChangeFeed", "true") 
+-- MAGIC         .option("startingVersion", 0) 
+-- MAGIC         .table(src_table_name) 
+-- MAGIC         .select(
+-- MAGIC             sha1(upper(trim(col("customer_id")))).alias("sha1_hub_customer"),
+-- MAGIC             col("customer_id").alias("customer_id"),
+-- MAGIC             current_timestamp().alias("load_ts"),
+-- MAGIC             lit("Customer").alias("source")
+-- MAGIC         )
+-- MAGIC     .writeStream.format("delta") 
+-- MAGIC         .option("checkpointLocation", checkpoint_path) 
+-- MAGIC         .option("mergeSchema", "true") 
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable(dest_table_name) 
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC ######################  sat_Customer ########################
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC from pyspark.sql.functions  import *
+-- MAGIC 
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC src_table_name = "main.dv2_0.raw_dim_customer"
+-- MAGIC dest_table_name = "main.dv2_0.sat_customer"
+-- MAGIC checkpoint_path = parent_path + src_table_name + "/e2-demo/CDF/checkpoint/" + dest_table_name 
+-- MAGIC 
+-- MAGIC (spark.readStream.format("delta") 
+-- MAGIC         .option("readChangeFeed", "true") 
+-- MAGIC         .option("startingVersion", 0) 
+-- MAGIC         .table(src_table_name) 
+-- MAGIC         .select(
+-- MAGIC             sha1(upper(trim(col("customer_id")))).alias("sha1_hub_customer"),
+-- MAGIC             col("name").alias("name"),
+-- MAGIC             col("email").alias("email"),
+-- MAGIC             col("address").alias("address"),
+-- MAGIC             col("start_at").alias("start_at"),
+-- MAGIC             sha1(concat(upper(trim(col("name"))),upper(trim(col("email"))),upper(trim(col("address"))))).alias("hash_diff"),
+-- MAGIC             current_timestamp().alias("load_ts"),
+-- MAGIC             lit("Customer").alias("source")
+-- MAGIC         )
+-- MAGIC     .writeStream.format("delta") 
+-- MAGIC         .option("checkpointLocation", checkpoint_path) 
+-- MAGIC         .option("mergeSchema", "true") 
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable(dest_table_name) 
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC ############################## RAW SALES FEED #########################
+-- MAGIC 
+-- MAGIC schema_hint = """
+-- MAGIC               transaction_id BIGINT,
+-- MAGIC               date_id BIGINT ,
+-- MAGIC               customer_id BIGINT ,
+-- MAGIC               product_id BIGINT ,
+-- MAGIC               store_id BIGINT ,
+-- MAGIC               store_business_key STRING,
+-- MAGIC               sales_amount DOUBLE
+-- MAGIC 
+-- MAGIC """
+-- MAGIC src_table_name = "fact_sales"
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC schema_checkpoint_file_path = parent_path + src_table_name + "/e2-demo/ingestion/" + src_table_name 
+-- MAGIC dest_table_name = "main.dv2_0.raw_fact_sales"
+-- MAGIC (
+-- MAGIC    spark.readStream.format("cloudFiles")
+-- MAGIC         .option("cloudFiles.schemaLocation", schema_checkpoint_file_path+"/schema")
+-- MAGIC         .option("cloudFiles.format", "csv")
+-- MAGIC         .option("header", "false")
+-- MAGIC         .schema(schema_hint)
+-- MAGIC         .load(parent_path+"/Tables/"+src_table_name)
+-- MAGIC         .writeStream.format("delta")
+-- MAGIC         .option("mergeSchema", "true")
+-- MAGIC         .option("checkpointLocation",schema_checkpoint_file_path+"/checkpoint")
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable("main.dv2_0.raw_fact_sales")        
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC ######################  hub_Sales  ########################
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC from pyspark.sql.functions  import *
+-- MAGIC 
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC src_table_name = "main.dv2_0.raw_fact_sales"
+-- MAGIC dest_table_name = "main.dv2_0.hub_sales"
+-- MAGIC checkpoint_path = parent_path + src_table_name + "/e2-demo/CDF/checkpoint/" + dest_table_name 
+-- MAGIC 
+-- MAGIC (spark.readStream.format("delta") 
+-- MAGIC         .option("readChangeFeed", "true") 
+-- MAGIC         .option("startingVersion", 0) 
+-- MAGIC         .table(src_table_name) 
+-- MAGIC         .select(
+-- MAGIC             sha1(upper(trim(col("transaction_id")))).alias("sha1_hub_sales_id"),
+-- MAGIC             col("transaction_id").alias("transaction_id"),
+-- MAGIC             current_timestamp().alias("load_ts"),
+-- MAGIC             lit("Sales").alias("source")
+-- MAGIC         )
+-- MAGIC     .writeStream.format("delta") 
+-- MAGIC         .option("checkpointLocation", checkpoint_path) 
+-- MAGIC         .option("mergeSchema", "true") 
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable(dest_table_name) 
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC ######################  sat_Sales ########################
+-- MAGIC 
+-- MAGIC 
+-- MAGIC 
+-- MAGIC from pyspark.sql.functions  import *
+-- MAGIC 
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC src_table_name = "main.dv2_0.raw_fact_sales"
+-- MAGIC dest_table_name = "main.dv2_0.sat_sales"
+-- MAGIC checkpoint_path = parent_path + src_table_name + "/e2-demo/CDF/checkpoint/" + dest_table_name 
+-- MAGIC 
+-- MAGIC (spark.readStream.format("delta") 
+-- MAGIC         .option("readChangeFeed", "true") 
+-- MAGIC         .option("startingVersion", 0) 
+-- MAGIC         .table(src_table_name) 
+-- MAGIC         .select(
+-- MAGIC             sha1(upper(trim(col("transaction_id")))).alias("sha1_hub_sales_id"),
+-- MAGIC             col("date_id").alias("sales_date"),
+-- MAGIC             col("sales_amount").alias("sales_amount"),
+-- MAGIC             col("store_business_key").alias("store_business_key"),
+-- MAGIC             current_timestamp().alias("load_ts"),
+-- MAGIC             lit("Sales").alias("source")
+-- MAGIC         )
+-- MAGIC     .writeStream.format("delta") 
+-- MAGIC         .option("checkpointLocation", checkpoint_path) 
+-- MAGIC         .option("mergeSchema", "true")
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable(dest_table_name) 
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC ######################  LNK CUSTOMER SALES ########################
+-- MAGIC 
+-- MAGIC            
+-- MAGIC from pyspark.sql.functions  import *
+-- MAGIC 
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC src_table_name = "main.dv2_0.raw_fact_sales"
+-- MAGIC dest_table_name = "main.dv2_0.lnk_customer_sales"
+-- MAGIC checkpoint_path = parent_path + src_table_name + "/e2-demo/CDF/checkpoint/" + dest_table_name 
+-- MAGIC 
+-- MAGIC (spark.readStream.format("delta") 
+-- MAGIC         .option("readChangeFeed", "true") 
+-- MAGIC         .option("startingVersion", 0) 
+-- MAGIC         .table(src_table_name) 
+-- MAGIC         .select(
+-- MAGIC             sha1(concat(upper(trim(col("transaction_id"))),upper(trim(col("customer_id"))))).alias("sha1_lnk_customer_sales"),
+-- MAGIC             sha1(upper(trim(col("transaction_id")))).alias("sha1_hub_sales_id"),
+-- MAGIC             sha1(upper(trim(col("customer_id")))).alias("sha1_hub_customer"),
+-- MAGIC             current_timestamp().alias("load_ts"),
+-- MAGIC             lit("Customer & Sales").alias("source")
+-- MAGIC         )
+-- MAGIC     .writeStream.format("delta") 
+-- MAGIC         .option("checkpointLocation", checkpoint_path) 
+-- MAGIC         .option("mergeSchema", "true") 
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable(dest_table_name) 
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC ######################  LNK PRODUCT  SALES ########################
+-- MAGIC 
+-- MAGIC            
+-- MAGIC from pyspark.sql.functions  import *
+-- MAGIC 
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC src_table_name = "main.dv2_0.raw_fact_sales"
+-- MAGIC dest_table_name = "main.dv2_0.lnk_product_sales"
+-- MAGIC checkpoint_path = parent_path + src_table_name + "/e2-demo/CDF/checkpoint/" + dest_table_name 
+-- MAGIC 
+-- MAGIC (spark.readStream.format("delta") 
+-- MAGIC         .option("readChangeFeed", "true") 
+-- MAGIC         .option("startingVersion", 0) 
+-- MAGIC         .table(src_table_name) 
+-- MAGIC         .select(
+-- MAGIC             sha1(concat(upper(trim(col("transaction_id"))),upper(trim(col("product_id"))))).alias("sha1_lnk_product_sales"),
+-- MAGIC             sha1(upper(trim(col("transaction_id")))).alias("sha1_hub_sales_id"),
+-- MAGIC             sha1(upper(trim(col("product_id")))).alias("sha1_hub_product"),
+-- MAGIC             current_timestamp().alias("load_ts"),
+-- MAGIC             lit("Sales & Product").alias("source")
+-- MAGIC         )
+-- MAGIC     .writeStream.format("delta") 
+-- MAGIC         .option("checkpointLocation", checkpoint_path) 
+-- MAGIC         .option("mergeSchema", "true")
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable(dest_table_name) 
+-- MAGIC )
+
+-- COMMAND ----------
+
+--------------------------       MV CODE STARTS HERE     ----------------------------------------
+------------------------- MV can Only Run on SQL Warehouse , No Serverless ----------------------
+
+
+CREATE MATERIALIZED VIEW main.dv2_0.sat_sales_bv SNAPSHOT AS
+		SELECT 
+			sha1_hub_sales_id AS sha1_hub_sales_id,
+			sales_date AS sales_date,
+			sales_amount AS sales_amount,
+			store_business_key AS store_business_key,
+			CASE WHEN store_business_key IN ('BNE02') THEN 'Tier-1'
+				 WHEN store_business_key IN ('PER01') THEN 'Tier-2'  
+				 ELSE 'Tier-3'
+			END custom_business_rule 
+		 FROM 
+			main.dv2_0.sat_sales ;
+
+------------------------- REFRESH MATERIALIZED VIEWS ------------------------------------------------
+REFRESH MATERIALIZED VIEW main.dv2_0.sat_sales_bv;            
+		
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Loading the Landing zone on Bronze Layer via Autoloader 
+-- MAGIC %python
+-- MAGIC ################################ RAW FEED FOR DIM DATE ################################
+-- MAGIC schema_hint = """
+-- MAGIC               date_id BIGINT,
+-- MAGIC               date_num INT,
+-- MAGIC               date STRING,
+-- MAGIC               year_month_number INT,
+-- MAGIC               calendar_quarter STRING,
+-- MAGIC               month_num INT,
+-- MAGIC               month_name STRING,
+-- MAGIC               created_date TIMESTAMP,
+-- MAGIC               updated_date TIMESTAMP,
+-- MAGIC               start_at TIMESTAMP,
+-- MAGIC               end_at TIMESTAMP
+-- MAGIC """
+-- MAGIC src_table_name = "dim_date"
+-- MAGIC parent_path = "abfss://datavault@sumitsalesdata.dfs.core.windows.net/Demo/"
+-- MAGIC schema_checkpoint_file_path = parent_path + src_table_name + "/e2-demo/ingestion/" + src_table_name 
+-- MAGIC dest_table_name = "main.dv2_0.raw_dim_date"
+-- MAGIC 
+-- MAGIC df = (spark.readStream.format("cloudFiles")
+-- MAGIC         .option("cloudFiles.schemaLocation", schema_checkpoint_file_path+"/schema")
+-- MAGIC         .option("cloudFiles.format", "csv")
+-- MAGIC         .option("header", "false")
+-- MAGIC         .schema(schema_hint)
+-- MAGIC         .load(parent_path+"/Tables"+src_table_name)
+-- MAGIC         .writeStream.format("delta")
+-- MAGIC         .option("checkpointLocation",schema_checkpoint_file_path+"/checkpoint")
+-- MAGIC         .trigger(availableNow=True)
+-- MAGIC         .toTable("main.dv2_0.raw_dim_date")   
+-- MAGIC )
