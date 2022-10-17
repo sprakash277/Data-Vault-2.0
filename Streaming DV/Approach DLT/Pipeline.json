@@ -1,0 +1,35 @@
+{
+    "clusters": [
+        {
+            "label": "default",
+            "autoscale": {
+                "min_workers": 1,
+                "max_workers": 5,
+                "mode": "LEGACY"
+            }
+        }
+    ],
+    "development": true,
+    "continuous": false,
+    "channel": "CURRENT",
+    "edition": "ADVANCED",
+    "photon": false,
+    "libraries": [
+        {
+            "notebook": {
+                "path": "/Users/sumit.prakash@databricks.com/PFJ/Data Vault 2.0/Dimensional to DV2.0/DLT DV2.0/DLT Data Vault 2.0"
+            }
+        }
+    ],
+    "name": "DATA VAULT2.0 PIPELINE",
+    "configuration": {
+        "pipelines.enzyme.mode": "advanced",
+        "pipelines.enzyme.enabled": "true",
+        "spark.hadoop.fs.azure.account.auth.type.sumitsalesdata.dfs.core.windows.net": "OAuth",
+        "spark.hadoop.fs.azure.account.oauth.provider.type.sumitsalesdata.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider",
+        "spark.hadoop.fs.azure.account.oauth2.client.id.sumitsalesdata.dfs.core.windows.net": "CHANGE_ME",
+        "spark.hadoop.fs.azure.account.oauth2.client.secret.sumitsalesdata.dfs.core.windows.net": "CHANGE_ME",
+        "spark.hadoop.fs.azure.account.oauth2.client.endpoint.sumitsalesdata.dfs.core.windows.net": "https://login.microsoftonline.com/9f37a392-f0ae-4280-9796-f1864a10effc/oauth2/token"
+    },
+    "target": "pfj_dv20_demo"
+}

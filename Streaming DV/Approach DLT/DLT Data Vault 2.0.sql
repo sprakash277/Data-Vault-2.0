@@ -229,6 +229,7 @@ CREATE OR REFRESH STREAMING LIVE TABLE sat_sales(
   load_ts                 TIMESTAMP,
   source                  STRING     NOT NULL
 )
+TBLPROPERTIES (delta.enableChangeDataFeed = true)
 COMMENT " SAT SALES TABLE"
 AS SELECT
       sha1(UPPER(TRIM(transaction_id))) as sha1_hub_sales_id,

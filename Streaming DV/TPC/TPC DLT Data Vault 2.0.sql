@@ -226,3 +226,131 @@ AS  SELECT
           "
            )
       )
+
+-- COMMAND ----------
+
+CREATE OR REFRESH STREAMING LIVE TABLE raw_region 
+COMMENT "RAW Region Data"
+AS  SELECT 
+      * 
+    FROM 
+      cloud_files("/databricks-datasets/tpch/delta-001/region", "parquet",
+      map("schema", 
+          " 
+          r_regionkey     bigint,
+          r_name          string,
+          r_comment       string
+          "
+           )
+      )
+
+-- COMMAND ----------
+
+CREATE OR REFRESH LIVE TABLE ref_region(
+  r_regionkey        bigint     NOT NULL,
+  r_name             STRING ,
+  load_ts            TIMESTAMP,
+  source             STRING
+)
+COMMENT " Ref Region Table"
+AS SELECT
+        r_regionkey,
+        r_name,
+        current_timestamp as load_ts,
+        "Region" as source
+   FROM
+        live.raw_region
+
+-- COMMAND ----------
+
+CREATE OR REFRESH STREAMING LIVE TABLE raw_nation
+COMMENT "RAW Nation Data"
+AS  SELECT 
+      * 
+    FROM 
+      cloud_files("/databricks-datasets/tpch/delta-001/nation", "parquet",
+      map("schema", 
+          " 
+          n_nationkey     bigint,
+          n_name          string,
+          n_regionkey     bigint,
+          n_comment       string
+          "
+           )
+      )
+
+-- COMMAND ----------
+
+CREATE OR REFRESH LIVE TABLE ref_nation(
+  n_nationkey        bigint     NOT NULL,
+  n_name             STRING ,
+  n_regionkey        bigint,
+  load_ts            TIMESTAMP,
+  source             STRING
+)
+COMMENT " Ref Nation Table"
+AS SELECT
+        n_nationkey,
+        n_name,
+        n_regionkey,
+        current_timestamp as load_ts,
+        "Nation" as source
+   FROM
+        live.raw_nation
+
+-- COMMAND ----------
+
+CREATE OR REFRESH STREAMING LIVE TABLE hub_lineitem(
+  sha1_hub_lineitem        STRING     NOT NULL,
+  sha1_hub_orderkey        STRING     NOT NULL,
+  l_linenumber             int,
+  load_ts                  TIMESTAMP,
+  source                   STRING
+)
+COMMENT " HUb LINEITEM TABLE"
+AS SELECT
+      sha1(concat(UPPER(TRIM(l_orderkey)),UPPER(TRIM(l_linenumber)))) as sha1_hub_lineitem,
+      sha1(UPPER(TRIM(l_orderkey))) as sha1_hub_orderkey,
+      l_linenumber,
+      current_timestamp as load_ts,
+      "LineItem" as source
+   FROM
+      STREAM(live.raw_lineitem)
+
+-- COMMAND ----------
+
+CREATE OR REFRESH STREAMING LIVE TABLE sat_lineitem(
+          sha1_hub_lineitem        STRING     NOT NULL,
+          l_quantity               decimal(18,2),
+          l_extendedprice          decimal(18,2),
+          l_discount               decimal(18,2),
+          l_tax                    decimal(18,2),
+          l_returnflag             string,
+          l_linestatus             string,
+          l_shipdate               date,
+          l_commitdate             date,
+          l_receiptdate            date,
+          l_shipinstructs          string,
+          l_shipmode               string,
+          load_ts                  TIMESTAMP,
+          source                   STRING
+)
+COMMENT " SAT LINEITEM TABLE"
+AS SELECT
+          sha1(concat(UPPER(TRIM(l_orderkey)),UPPER(TRIM(l_linenumber)))) as sha1_hub_lineitem,
+          l_quantity,
+          l_extendedprice,
+          l_discount,
+          l_tax,
+          l_returnflag,
+          l_linestatus,
+          l_shipdate,
+          l_commitdate,
+          l_receiptdate,
+          l_shipinstructs,
+          l_shipmode,
+          current_timestamp as load_ts,
+          "LineItem" as source
+   FROM
+      STREAM(live.raw_lineitem)
+      
