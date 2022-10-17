@@ -146,7 +146,6 @@ SET pipelines.metrics.reportOnEmptyExpectations.disabled=false;
 
 CREATE OR REFRESH STREAMING LIVE TABLE raw_lineitem 
 COMMENT "RAW LineItem Data"
-TBLPROPERTIES (pipelines.metrics.reportOnEmptyExpectations.disabled = false)
 AS  SELECT 
       * 
     FROM 
@@ -233,7 +232,6 @@ CREATE OR REFRESH STREAMING LIVE TABLE sat_orders(
   load_ts                 TIMESTAMP,
   source                  STRING    NOT NULL
 )
-TBLPROPERTIES (delta.enableChangeDataFeed = true)
 COMMENT " SAT CUSTOMER TABLE"
 
 AS SELECT
@@ -391,8 +389,7 @@ CREATE OR REFRESH  LIVE TABLE sat_order_bv
   o_clerk                   STRING,
   o_shippriority            INT,
   order_priority_tier       STRING,
-  hash_diff                 STRING,
-  load_ts                   TIMESTAMP,  
+  hash_diff                 STRING, 
   source                    STRING    NOT NULL
   
 )
@@ -410,7 +407,6 @@ AS SELECT
 			   ELSE 'Tier-3'
 		  END order_priority_tier,
           sha1(concat(UPPER(TRIM(o_orderstatus)),UPPER(TRIM(o_totalprice)),UPPER(TRIM(o_orderpriority)),UPPER(TRIM(o_shippriority)))) as hash_diff,
-          current_timestamp as load_ts,
           "sat_order" as source
    FROM
        live.sat_orders
