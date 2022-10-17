@@ -1,0 +1,33 @@
+{
+    "id": "1383ad06-ccf6-4f28-be16-65ffd1f34281",
+    "clusters": [
+        {
+            "label": "default",
+            "autoscale": {
+                "min_workers": 1,
+                "max_workers": 5,
+                "mode": "LEGACY"
+            }
+        }
+    ],
+    "development": true,
+    "continuous": false,
+    "channel": "CURRENT",
+    "edition": "ADVANCED",
+    "photon": false,
+    "libraries": [
+        {
+            "notebook": {
+                "path": "/Repos/sumit.prakash@databricks.com/Data-Vault-2.0/Streaming DV/TPC/TPC DLT Data Vault 2.0"
+            }
+        }
+    ],
+    "name": "DLT DV 2.0  with TPC DataSet",
+    "storage": "dbfs:/pipelines/1383ad06-ccf6-4f28-be16-65ffd1f34281",
+    "configuration": {
+        "pipelines.enzyme.mode": "advanced",
+        "pipelines.enzyme.enabled": "true",
+        "pipelines.metrics.reportOnEmptyExpectations.disabled": "false"
+    },
+    "target": "sumit_test_demo_v2"
+}
