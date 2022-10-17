@@ -360,6 +360,33 @@ AS SELECT
 
 -- COMMAND ----------
 
+CREATE OR REFRESH  LIVE TABLE sat_customer_bv(
+	   AS
+	   SELECT 
+             src.sha1_hub_custkey      AS sha1_hub_custkey,
+	         src.source                AS source,                  
+	         src.c_name                AS c_name ,             
+	         src.c_address             AS c_address ,             
+	         src.c_phone               AS c_phone ,              
+	         src.c_acctbal             AS c_acctbal,             
+	         src.c_mktsegment          AS c_mktsegment,                          
+	         src.c_nationkey           AS c_nationkey,          
+	         src.source                AS source,
+	        -- derived 
+	         nation.n_name             AS nation_name,
+	         region.r_name             AS region_name
+	     FROM LIVE.sat_customer          src
+	     LEFT OUTER JOIN 
+              LIVE.ref_nation nation
+	             ON (src.c_nationkey = nation.n_nationkey)
+	     LEFT OUTER JOIN 
+              LIVE.ref_region region
+	             ON (nation.n_regionkey = region.r_regionkey)
+  )         
+	   ;
+
+-- COMMAND ----------
+
 CREATE OR REFRESH LIVE TABLE ref_nation(
   n_nationkey        bigint     NOT NULL,
   n_name             STRING ,
@@ -410,3 +437,29 @@ AS SELECT
           "sat_order" as source
    FROM
        live.sat_orders
+
+-- COMMAND ----------
+
+CREATE LIVE VIEW sat_customer_bv
+	   AS
+	   SELECT 
+             src.sha1_hub_custkey      AS sha1_hub_custkey,
+	         src.source                AS source,                  
+	         src.c_name                AS c_name ,             
+	         src.c_address             AS c_address ,             
+	         src.c_phone               AS c_phone ,              
+	         src.c_acctbal             AS c_acctbal,             
+	         src.c_mktsegment          AS c_mktsegment,                          
+	         src.c_nationkey           AS c_nationkey,          
+	        -- derived 
+	         nation.n_name             AS nation_name,
+	         region.r_name             AS region_name
+	     FROM LIVE.sat_customer          src
+	     LEFT OUTER JOIN 
+              LIVE.ref_nation nation
+	             ON (src.c_nationkey = nation.n_nationkey)
+	     LEFT OUTER JOIN 
+              LIVE.ref_region region
+	             ON (nation.n_regionkey = region.r_regionkey)
+           
+	   ;
