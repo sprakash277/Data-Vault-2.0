@@ -24,6 +24,20 @@ AS  SELECT
 
 -- COMMAND ----------
 
+CREATE  STREAMING LIVE VIEW raw_customer_vw 
+COMMENT "RAW Customer Data View"
+AS  SELECT
+        sha1(UPPER(TRIM(c_custkey))) as sha1_hub_custkey,
+        sha1(concat(UPPER(TRIM(c_name)),UPPER(TRIM(c_address)),UPPER(TRIM(c_phone)),UPPER(TRIM(c_mktsegment)))) as hash_diff,
+        current_timestamp as load_ts,
+        "Customer" as source,
+        * 
+    FROM STREAM(LIVE.raw_customer)
+      
+      
+
+-- COMMAND ----------
+
 -- Use this property until the DLT Enzyme Bug gets resolved
 SET pipelines.metrics.reportOnEmptyExpectations.disabled=false;
 
@@ -188,18 +202,18 @@ CREATE OR REFRESH STREAMING LIVE TABLE sat_customer(
 )
 COMMENT " SAT CUSTOMER TABLE"
 AS SELECT
-      sha1(UPPER(TRIM(c_custkey))) as sha1_hub_custkey,
+      sha1_hub_custkey,
       c_name,
       c_address,
       c_nationkey,
       c_phone,
       c_acctbal,
       c_mktsegment,
-      sha1(concat(UPPER(TRIM(c_name)),UPPER(TRIM(c_address)),UPPER(TRIM(c_phone)),UPPER(TRIM(c_mktsegment)))) as hash_diff,
-      current_timestamp as load_ts,
-      "Customer" as source
+      hash_diff,
+      load_ts,
+      source
    FROM
-      STREAM(live.raw_customer)
+      STREAM(live.raw_customer_vw)
 
 -- COMMAND ----------
 
@@ -211,12 +225,12 @@ CREATE OR REFRESH STREAMING LIVE TABLE hub_customer(
 )
 COMMENT " HUb CUSTOMER TABLE"
 AS SELECT
-      sha1(UPPER(TRIM(c_custkey))) as sha1_hub_custkey ,
+      sha1_hub_custkey ,
       c_custkey,
-      current_timestamp as load_ts,
-      "Customer" as source
+      load_ts,
+      source
    FROM
-      STREAM(live.raw_customer)
+      STREAM(live.raw_customer_vw)
       
 
 -- COMMAND ----------
@@ -357,33 +371,6 @@ AS SELECT
         "Region" as source
    FROM
         live.raw_region
-
--- COMMAND ----------
-
-CREATE OR REFRESH  LIVE TABLE sat_customer_bv(
-	   AS
-	   SELECT 
-             src.sha1_hub_custkey      AS sha1_hub_custkey,
-	         src.source                AS source,                  
-	         src.c_name                AS c_name ,             
-	         src.c_address             AS c_address ,             
-	         src.c_phone               AS c_phone ,              
-	         src.c_acctbal             AS c_acctbal,             
-	         src.c_mktsegment          AS c_mktsegment,                          
-	         src.c_nationkey           AS c_nationkey,          
-	         src.source                AS source,
-	        -- derived 
-	         nation.n_name             AS nation_name,
-	         region.r_name             AS region_name
-	     FROM LIVE.sat_customer          src
-	     LEFT OUTER JOIN 
-              LIVE.ref_nation nation
-	             ON (src.c_nationkey = nation.n_nationkey)
-	     LEFT OUTER JOIN 
-              LIVE.ref_region region
-	             ON (nation.n_regionkey = region.r_regionkey)
-  )         
-	   ;
 
 -- COMMAND ----------
 
