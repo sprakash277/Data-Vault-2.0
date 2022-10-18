@@ -2,7 +2,7 @@
 -- Use this property until the DLT Enzyme Bug gets resolved
 SET pipelines.metrics.reportOnEmptyExpectations.disabled=false;
 
-CREATE OR REFRESH STREAMING LIVE TABLE raw_customer 
+CREATE OR REFRESH STREAMING LIVE TABLE raw_customer_A 
 COMMENT "RAW Customer Data"
 AS  SELECT 
       * 
@@ -24,17 +24,61 @@ AS  SELECT
 
 -- COMMAND ----------
 
-CREATE  STREAMING LIVE VIEW raw_customer_vw 
+-- simulating another source to demonstrate if the data are coming from a different source
+CREATE OR REFRESH STREAMING LIVE TABLE raw_customer_B 
+COMMENT "RAW Customer Data from source B"
+AS  SELECT 
+      * 
+    FROM 
+      cloud_files("/databricks-datasets/tpch/delta-001/customer", "parquet",
+      map("schema", 
+          " 
+          c_custkey     bigint,
+          c_name        string,
+          c_address     string,
+          c_nationkey   bigint,
+          c_phone       string,
+          c_acctbal     decimal(18,2),
+          c_mktsegment  string,
+          c_comment     string
+          "
+           )
+      )
+
+-- COMMAND ----------
+
+CREATE  STREAMING LIVE VIEW raw_customer_vw
 COMMENT "RAW Customer Data View"
 AS  SELECT
         sha1(UPPER(TRIM(c_custkey))) as sha1_hub_custkey,
         sha1(concat(UPPER(TRIM(c_name)),UPPER(TRIM(c_address)),UPPER(TRIM(c_phone)),UPPER(TRIM(c_mktsegment)))) as hash_diff,
         current_timestamp as load_ts,
-        "Customer" as source,
-        * 
-    FROM STREAM(LIVE.raw_customer)
-      
-      
+        "Customer Source A" as source,
+        c_custkey,
+        c_name,
+        c_address,
+        c_nationkey,
+        c_phone,
+        c_acctbal,
+        c_mktsegment,
+        c_comment
+    FROM STREAM(LIVE.raw_customer_A)
+    UNION
+    SELECT
+        -- generate a random number to simulate a different business key
+        sha1(concat(UPPER(TRIM(c_custkey)), cast(floor(rand()*101) as STRING))) as sha1_hub_custkey,
+        sha1(concat(UPPER(TRIM(c_name)),UPPER(TRIM(c_address)),UPPER(TRIM(c_phone)),UPPER(TRIM(c_mktsegment)))) as hash_diff,
+        current_timestamp as load_ts,
+        "Customer Source B" as source,
+        c_custkey,
+        c_name,
+        c_address,
+        c_nationkey,
+        c_phone,
+        c_acctbal,
+        c_mktsegment,
+        c_comment
+    FROM STREAM(LIVE.raw_customer_B)
 
 -- COMMAND ----------
 
@@ -199,6 +243,7 @@ CREATE OR REFRESH STREAMING LIVE TABLE sat_customer(
   hash_diff               STRING    NOT NULL,
   load_ts                 TIMESTAMP,
   source                  STRING    NOT NULL
+  CONSTRAINT valid_sha1_hub_custkey EXPECT (sha1_hub_custkey IS NOT NULL) ON VIOLATION DROP ROW
 )
 COMMENT " SAT CUSTOMER TABLE"
 AS SELECT
@@ -222,6 +267,8 @@ CREATE OR REFRESH STREAMING LIVE TABLE hub_customer(
   c_custkey                 BIGINT     NOT NULL,
   load_ts                 TIMESTAMP,
   source                  STRING
+  CONSTRAINT valid_sha1_hub_custkey EXPECT (sha1_hub_custkey IS NOT NULL) ON VIOLATION DROP ROW,
+  CONSTRAINT valid_custkey EXPECT (c_custkey IS NOT NULL) ON VIOLATION DROP ROW
 )
 COMMENT " HUb CUSTOMER TABLE"
 AS SELECT
