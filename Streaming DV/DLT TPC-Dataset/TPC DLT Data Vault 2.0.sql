@@ -236,30 +236,44 @@ AS SELECT
 -- COMMAND ----------
 
 CREATE OR REFRESH STREAMING LIVE TABLE sat_orders(
-  sha1_hub_orderkey       STRING    NOT NULL,
+  sha1_hub_orderkey         STRING    NOT NULL,
   o_orderstatus             STRING,
   o_totalprice              decimal(18,2),
   o_orderdate               DATE,
   o_orderpriority           STRING,
   o_clerk                   STRING,
   o_shippriority            INT,
-  load_ts                 TIMESTAMP,
-  source                  STRING    NOT NULL
+  load_ts                   TIMESTAMP,
+  source                    STRING    NOT NULL
 )
 COMMENT " SAT CUSTOMER TABLE"
 
 AS SELECT
-      sha1(UPPER(TRIM(o_orderkey))) as sha1_hub_orderkey,
+      sha1_hub_orderkey,
       o_orderstatus,
       o_totalprice,
       o_orderdate,
       o_orderpriority,
       o_clerk,
       o_shippriority,
-      current_timestamp as load_ts,
-      "Order" as source
+      load_ts,
+      source
    FROM
-      STREAM(live.raw_orders)
+      STREAM(live.raw_orders_vw)
+
+-- COMMAND ----------
+
+CREATE  STREAMING LIVE VIEW raw_orders_vw 
+COMMENT "RAW Order Data View"
+AS  SELECT
+        sha1(UPPER(TRIM(o_orderkey))) as sha1_hub_orderkey,
+        sha1(concat(UPPER(TRIM(o_orderkey)),UPPER(TRIM(o_custkey)))) as sha1_lnk_customer_order_key,
+        sha1(UPPER(TRIM(o_custkey)))  as sha1_hub_custkey,
+        sha1(concat(UPPER(TRIM(o_orderstatus)),UPPER(TRIM(o_totalprice)),UPPER(TRIM(o_orderpriority)),UPPER(TRIM(o_shippriority)))) as hash_diff,
+        current_timestamp as load_ts,
+        "Order" as source,
+        * 
+    FROM STREAM(LIVE.raw_orders)
 
 -- COMMAND ----------
 
@@ -271,12 +285,12 @@ CREATE OR REFRESH STREAMING LIVE TABLE hub_orders(
 )
 COMMENT " HUb CUSTOMER TABLE"
 AS SELECT
-      sha1(UPPER(TRIM(o_orderkey))) as sha1_hub_orderkey ,
+      sha1_hub_orderkey ,
       o_orderkey,
-      current_timestamp as load_ts,
-      "Order" as source
+      load_ts,
+      source
    FROM
-      STREAM(live.raw_orders)
+      STREAM(live.raw_orders_vw)
 
 -- COMMAND ----------
 
@@ -290,13 +304,13 @@ CREATE OR REFRESH STREAMING LIVE TABLE lnk_customer_orders
 )
 COMMENT " LNK CUSTOMER ORDERS TABLE "
 AS SELECT
-      sha1(concat(UPPER(TRIM(o_orderkey)),UPPER(TRIM(o_custkey)))) as sha1_lnk_customer_order_key,
-      sha1(UPPER(TRIM(o_orderkey))) as sha1_hub_orderkey,
-      sha1(UPPER(TRIM(o_custkey)))  as sha1_hub_custkey,
-      current_timestamp             as load_ts,
-      "Orders and Customer"         as source
+      sha1_lnk_customer_order_key,
+      sha1_hub_orderkey,
+      sha1_hub_custkey,
+      load_ts,
+      source
    FROM
-       STREAM(live.raw_orders)
+       STREAM(live.raw_orders_vw)
 
 -- COMMAND ----------
 
@@ -309,13 +323,25 @@ CREATE OR REFRESH STREAMING LIVE TABLE hub_lineitem(
 )
 COMMENT " HUb LINEITEM TABLE"
 AS SELECT
-      sha1(concat(UPPER(TRIM(l_orderkey)),UPPER(TRIM(l_linenumber)))) as sha1_hub_lineitem,
-      sha1(UPPER(TRIM(l_orderkey))) as sha1_hub_orderkey,
+      sha1_hub_lineitem,
+      sha1_hub_orderkey,
       l_linenumber,
-      current_timestamp as load_ts,
-      "LineItem" as source
+      load_ts,
+      source
    FROM
-      STREAM(live.raw_lineitem)
+      STREAM(live.raw_lineitem_vw)
+
+-- COMMAND ----------
+
+CREATE  STREAMING LIVE VIEW raw_lineitem_vw 
+COMMENT "RAW LineItem View"
+AS  SELECT
+        sha1(concat(UPPER(TRIM(l_orderkey)),UPPER(TRIM(l_linenumber)))) as sha1_hub_lineitem,
+        sha1(UPPER(TRIM(l_orderkey))) as sha1_hub_orderkey,
+        current_timestamp as load_ts,
+        "LineItem" as source,
+        * 
+    FROM STREAM(LIVE.raw_lineitem)
 
 -- COMMAND ----------
 
@@ -337,7 +363,7 @@ CREATE OR REFRESH STREAMING LIVE TABLE sat_lineitem(
 )
 COMMENT " SAT LINEITEM TABLE"
 AS SELECT
-          sha1(concat(UPPER(TRIM(l_orderkey)),UPPER(TRIM(l_linenumber)))) as sha1_hub_lineitem,
+          sha1_hub_lineitem,
           l_quantity,
           l_extendedprice,
           l_discount,
@@ -349,10 +375,10 @@ AS SELECT
           l_receiptdate,
           l_shipinstructs,
           l_shipmode,
-          current_timestamp as load_ts,
-          "LineItem" as source
+          load_ts,
+          source
    FROM
-      STREAM(live.raw_lineitem)
+      STREAM(live.raw_lineitem_vw)
       
 
 -- COMMAND ----------
@@ -403,7 +429,6 @@ CREATE OR REFRESH  LIVE TABLE sat_order_bv
   o_clerk                   STRING,
   o_shippriority            INT,
   order_priority_tier       STRING,
-  hash_diff                 STRING, 
   source                    STRING    NOT NULL
   
 )
@@ -420,8 +445,7 @@ AS SELECT
                WHEN o_orderpriority IN ('3-MEDIUM', '2-HIGH', '1-URGENT') AND o_totalprice BETWEEN 120000 AND 225000 THEN 'Tier-2'   
 			   ELSE 'Tier-3'
 		  END order_priority_tier,
-          sha1(concat(UPPER(TRIM(o_orderstatus)),UPPER(TRIM(o_totalprice)),UPPER(TRIM(o_orderpriority)),UPPER(TRIM(o_shippriority)))) as hash_diff,
-          "sat_order" as source
+          source
    FROM
        live.sat_orders
 
