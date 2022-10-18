@@ -10,14 +10,14 @@ AS  SELECT
       cloud_files("/databricks-datasets/tpch/delta-001/customer", "parquet",
       map("schema", 
           " 
-          c_custkey     bigint,
-          c_name        string,
-          c_address     string,
-          c_nationkey   bigint,
-          c_phone       string,
-          c_acctbal     decimal(18,2),
-          c_mktsegment  string,
-          c_comment     string
+          c_custkey     BIGINT,
+          c_name        STRING,
+          c_address     STRING,
+          c_nationkey   BIGINT,
+          c_phone       STRING,
+          c_acctbal     DECIMAL(18,2),
+          c_mktsegment  STRING,
+          c_comment     STRING
           "
            )
       )
@@ -33,14 +33,14 @@ AS  SELECT
       cloud_files("/databricks-datasets/tpch/delta-001/customer", "parquet",
       map("schema", 
           " 
-          c_custkey     bigint,
-          c_name        string,
-          c_address     string,
-          c_nationkey   bigint,
-          c_phone       string,
-          c_acctbal     decimal(18,2),
-          c_mktsegment  string,
-          c_comment     string
+          c_custkey     BIGINT,
+          c_name        STRING,
+          c_address     STRING,
+          c_nationkey   BIGINT,
+          c_phone       STRING,
+          c_acctbal     DECIMAL(18,2),
+          c_mktsegment  STRING,
+          c_comment     STRING
           "
            )
       )
@@ -93,15 +93,15 @@ AS  SELECT
       cloud_files("/databricks-datasets/tpch/delta-001/orders", "parquet",
       map("schema", 
           " 
-          o_orderkey       bigint,
-          o_custkey        bigint,
-          o_orderstatus    string,
-          o_totalprice     decimal(18,2),
-          o_orderdate      date,
-          o_orderpriority  string,
-          o_clerk          string,
-          o_shippriority   int,
-          o_comment        string
+          o_orderkey       BIGINT,
+          o_custkey        BIGINT,
+          o_orderstatus    STRING,
+          o_totalprice     DECIMAL(18,2),
+          o_orderdate      DATE,
+          o_orderpriority  STRING,
+          o_clerk          STRING,
+          o_shippriority   INT,
+          o_comment        STRING
           "
            )
       )
@@ -119,15 +119,15 @@ AS  SELECT
       cloud_files("/databricks-datasets/tpch/delta-001/part", "parquet",
       map("schema", 
           " 
-          p_partkey      bigint,
-          p_name         string,
-          p_mfgr         string,
-          p_brand        string,
-          p_type         string,
-          p_size         int,
-          p_container    string,
-          p_retailprice  decimal(18,2),
-          p_comment      string
+          p_partkey      BIGINT,
+          p_name         STRING,
+          p_mfgr         STRING,
+          p_brand        STRING,
+          p_type         STRING,
+          p_size         INT,
+          p_container    STRING,
+          p_retailprice  DECIMAL(18,2),
+          p_comment      STRING
           "
            )
       )
@@ -145,13 +145,13 @@ AS  SELECT
       cloud_files("/databricks-datasets/tpch/delta-001/supplier", "parquet",
       map("schema", 
           " 
-          s_suppkey      bigint,
-          s_name         string,
-          s_address      string,
-          s_nationkey    bigint,
-          s_phone        string,
-          s_acctbal      decimal(18,2),
-          s_comment      string
+          s_suppkey      BIGINT,
+          s_name         STRING,
+          s_address      STRING,
+          s_nationkey    BIGINT,
+          s_phone        STRING,
+          s_acctbal      DECIMAL(18,2),
+          s_comment      STRING
           "
            )
       )
@@ -169,9 +169,9 @@ AS  SELECT
       cloud_files("/databricks-datasets/tpch/delta-001/region", "parquet",
       map("schema", 
           " 
-          r_regionkey     bigint,
-          r_name          string,
-          r_comment       string
+          r_regionkey     BIGINT,
+          r_name          STRING,
+          r_comment       STRING
           "
            )
       )
@@ -189,10 +189,10 @@ AS  SELECT
       cloud_files("/databricks-datasets/tpch/delta-001/nation", "parquet",
       map("schema", 
           " 
-          n_nationkey     bigint,
-          n_name          string,
-          n_regionkey     bigint,
-          n_comment       string
+          n_nationkey     BIGINT,
+          n_name          STRING,
+          n_regionkey     BIGINT,
+          n_comment       STRING
           "
            )
       )
@@ -210,22 +210,22 @@ AS  SELECT
       cloud_files("/databricks-datasets/tpch/delta-001/lineitem", "parquet",
       map("schema", 
           " 
-          l_orderkey      bigint,
-          l_partkey       bigint,
-          l_suppkey       bigint,
-          l_linenumber    int,
-          l_quantity      decimal(18,2),
-          l_extendedprice decimal(18,2),
-          l_discount      decimal(18,2),
-          l_tax           decimal(18,2),
-          l_returnflag    string,
-          l_linestatus    string,
-          l_shipdate      date,
-          l_commitdate    date,
-          l_receiptdate   date,
-          l_shipinstructs string,
-          l_shipmode      string,
-          l_comment       string
+          l_orderkey      BIGINT,
+          l_partkey       BIGINT,
+          l_suppkey       BIGINT,
+          l_linenumber    INT,
+          l_quantity      DECIMAL(18,2),
+          l_extendedprice DECIMAL(18,2),
+          l_discount      DECIMAL(18,2),
+          l_tax           DECIMAL(18,2),
+          l_returnflag    STRING,
+          l_linestatus    STRING,
+          l_shipdate      DATE,
+          l_commitdate    DATE,
+          l_receiptdate   DATE,
+          l_shipinstructs STRING,
+          l_shipmode      STRING,
+          l_comment       STRING
           "
            )
       )
@@ -233,16 +233,16 @@ AS  SELECT
 -- COMMAND ----------
 
 CREATE OR REFRESH STREAMING LIVE TABLE sat_customer(
-  sha1_hub_custkey        STRING    NOT NULL,
+  sha1_hub_custkey          STRING    NOT NULL,
   c_name                    STRING,
   c_address                 STRING,
   c_nationkey               BIGINT,
   c_phone                   STRING,
   c_acctbal                 DECIMAL(18,2),
   c_mktsegment              STRING,
-  hash_diff               STRING    NOT NULL,
-  load_ts                 TIMESTAMP,
-  source                  STRING    NOT NULL
+  hash_diff                 STRING    NOT NULL,
+  load_ts                   TIMESTAMP,
+  source                    STRING    NOT NULL
   CONSTRAINT valid_sha1_hub_custkey EXPECT (sha1_hub_custkey IS NOT NULL) ON VIOLATION DROP ROW
 )
 COMMENT " SAT CUSTOMER TABLE"
@@ -263,10 +263,10 @@ AS SELECT
 -- COMMAND ----------
 
 CREATE OR REFRESH STREAMING LIVE TABLE hub_customer(
-  sha1_hub_custkey        STRING     NOT NULL,
+  sha1_hub_custkey          STRING     NOT NULL,
   c_custkey                 BIGINT     NOT NULL,
-  load_ts                 TIMESTAMP,
-  source                  STRING
+  load_ts                   TIMESTAMP,
+  source                    STRING
   CONSTRAINT valid_sha1_hub_custkey EXPECT (sha1_hub_custkey IS NOT NULL) ON VIOLATION DROP ROW,
   CONSTRAINT valid_custkey EXPECT (c_custkey IS NOT NULL) ON VIOLATION DROP ROW
 )
@@ -364,7 +364,7 @@ AS SELECT
 CREATE OR REFRESH STREAMING LIVE TABLE hub_lineitem(
   sha1_hub_lineitem        STRING     NOT NULL,
   sha1_hub_orderkey        STRING     NOT NULL,
-  l_linenumber             int,
+  l_linenumber             INT,
   load_ts                  TIMESTAMP,
   source                   STRING
 )
@@ -394,17 +394,17 @@ AS  SELECT
 
 CREATE OR REFRESH STREAMING LIVE TABLE sat_lineitem(
           sha1_hub_lineitem        STRING     NOT NULL,
-          l_quantity               decimal(18,2),
-          l_extendedprice          decimal(18,2),
-          l_discount               decimal(18,2),
-          l_tax                    decimal(18,2),
-          l_returnflag             string,
-          l_linestatus             string,
-          l_shipdate               date,
-          l_commitdate             date,
-          l_receiptdate            date,
-          l_shipinstructs          string,
-          l_shipmode               string,
+          l_quantity               DECIMAL(18,2),
+          l_extendedprice          DECIMAL(18,2),
+          l_discount               DECIMAL(18,2),
+          l_tax                    DECIMAL(18,2),
+          l_returnflag             STRING,
+          l_linestatus             STRING,
+          l_shipdate               DATE,
+          l_commitdate             DATE,
+          l_receiptdate            DATE,
+          l_shipinstructs          STRING,
+          l_shipmode               STRING,
           load_ts                  TIMESTAMP,
           source                   STRING
 )
@@ -431,7 +431,7 @@ AS SELECT
 -- COMMAND ----------
 
 CREATE OR REFRESH LIVE TABLE ref_region(
-  r_regionkey        bigint     NOT NULL,
+  r_regionkey        BIGINT     NOT NULL,
   r_name             STRING ,
   load_ts            TIMESTAMP,
   source             STRING
@@ -448,9 +448,9 @@ AS SELECT
 -- COMMAND ----------
 
 CREATE OR REFRESH LIVE TABLE ref_nation(
-  n_nationkey        bigint     NOT NULL,
+  n_nationkey        BIGINT     NOT NULL,
   n_name             STRING ,
-  n_regionkey        bigint,
+  n_regionkey        BIGINT,
   load_ts            TIMESTAMP,
   source             STRING
 )
@@ -470,7 +470,7 @@ CREATE OR REFRESH  LIVE TABLE sat_order_bv
 (
   sha1_hub_orderkey         STRING     NOT NULL ,  
   o_orderstatus             STRING ,
-  o_totalprice              decimal(18,2) ,
+  o_totalprice              DECIMAL(18,2) ,
   o_orderdate               DATE,
   o_orderpriority           STRING,
   o_clerk                   STRING,
