@@ -1,5 +1,4 @@
 {
-    "id": "1383ad06-ccf6-4f28-be16-65ffd1f34281",
     "clusters": [
         {
             "label": "default",
@@ -23,7 +22,6 @@
         }
     ],
     "name": "DLT DV 2.0  with TPC DataSet",
-    "storage": "dbfs:/pipelines/1383ad06-ccf6-4f28-be16-65ffd1f34281",
     "configuration": {
         "pipelines.enzyme.mode": "advanced",
         "pipelines.enzyme.enabled": "true",
