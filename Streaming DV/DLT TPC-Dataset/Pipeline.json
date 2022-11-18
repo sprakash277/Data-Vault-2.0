@@ -1,4 +1,4 @@
-{
+{   
     "clusters": [
         {
             "label": "default",
@@ -17,7 +17,17 @@
     "libraries": [
         {
             "notebook": {
-                "path": "/Repos/sumit.prakash@databricks.com/Data-Vault-2.0/Streaming DV/TPC/TPC DLT Data Vault 2.0"
+                "path": "/Repos/sumit.prakash@databricks.com/Data-Vault-2.0/Streaming DV/DLT TPC-Dataset/TPC DLT Data Vault 2.0"
+            }
+        },
+        {
+            "notebook": {
+                "path": "/Repos/sumit.prakash@databricks.com/Data-Vault-2.0/Streaming DV/DLT TPC-Dataset/Kafka-source/DLT/Python/Raw - Kafka Consumer Customer Data.py"
+            }
+        },
+        {
+            "notebook": {
+                "path": "/Repos/sumit.prakash@databricks.com/Data-Vault-2.0/Streaming DV/DLT TPC-Dataset/Kafka-source/DLT/Python/Bronze - Kafka Customer Event.py"
             }
         }
     ],
@@ -27,5 +37,5 @@
         "pipelines.enzyme.enabled": "true",
         "pipelines.metrics.reportOnEmptyExpectations.disabled": "false"
     },
-    "target": "sumit_test_demo_v2"
+    "target": "<CHANGE_ME>"
 }

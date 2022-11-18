@@ -63,7 +63,7 @@ AS  SELECT
         c_mktsegment,
         c_comment
     FROM STREAM(LIVE.raw_customer_A)
-    UNION
+    UNION ALL
     SELECT
         -- generate a random number to simulate a different business key
         sha1(concat(UPPER(TRIM(c_custkey)), cast(floor(rand()*101) as STRING))) as sha1_hub_custkey,
@@ -79,6 +79,21 @@ AS  SELECT
         c_mktsegment,
         c_comment
     FROM STREAM(LIVE.raw_customer_B)
+    UNION ALL
+    SELECT
+        sha1(concat(UPPER(TRIM(c_custkey)), cast(floor(rand()*101) as STRING))) as sha1_hub_custkey,
+        sha1(concat(UPPER(TRIM(c_name)),UPPER(TRIM(c_address)),UPPER(TRIM(c_phone)),UPPER(TRIM(c_mktsegment)))) as hash_diff,
+        current_timestamp as load_ts,
+        "Kafka Event - Customer Source " as source,
+        c_custkey,
+        c_name,
+        c_address,
+        c_nationkey,
+        c_phone,
+        c_acctbal,
+        c_mktsegment,
+        c_comment
+    FROM STREAM(LIVE.customer_events_parsed_bronze)
 
 -- COMMAND ----------
 
